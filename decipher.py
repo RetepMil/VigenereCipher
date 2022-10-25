@@ -109,12 +109,12 @@ for key in key_strings.split('\n'):
     key, key_string = key.split(' ')
     
     temp_dict = defaultdict(list)
+    key_string_deque = deque(list(key_string))
     for i in range(26):
-        key_string_deque = deque(list(key_string))
         key_string_deque.rotate(-i)
         for j in range(26):
             temp_dict[key_string[i]].append(key_string_deque[j])
-    
+        key_string_deque.rotate(i)
     key_dict[key] = temp_dict
 
 pp.pprint(key_dict['00'])
@@ -154,6 +154,7 @@ plaintext  = 'THISCIPHERWASWIDELYUSEDBECAUSEOFSIMPLESTRUCTURE'
 
 combinations = {}
 for n in range(1, 26):
+    
     # groups에 residue of n 자리의 모든 문자를 하나의 그룹으로 묶어 놓는다
     groups = []
     for i in range(n):
@@ -167,7 +168,7 @@ for n in range(1, 26):
     # groups에 대해서 위의 조건 검사 진행
     for i in range(1, 26): # offset 값
         dictionary = {}
-        for idx, group in enumerate(groups): # 각 residue 집합에 대해서 다음의 조건이 부합하는지 확인
+        for idx, group in enumerate(groups): # 각 residue 집합에 대해서 조건이 부합하는지 확인
             possible_key = []
             for j in range(0, 100):
                 key = str(j) if j > 9 else f'0{j}'
@@ -177,8 +178,9 @@ for n in range(1, 26):
                 dictionary[idx] = possible_key
         
         if len(dictionary) == n:
-            # pp.pprint(f'################# n: {n}, offset: {i} #################\n')
-            # pp.pprint(dictionary)
+            print(f'################# n: {n}, offset: {i} #################')
+            pp.pprint(dictionary)
+            print('#######################################################\n')
             combinations = dictionary
 
 '''
@@ -191,8 +193,10 @@ confirmed_keys = set([possible_keys[0] for place, possible_keys in combinations.
 for key in combinations.keys():
     if len(combinations[key]) != 1:
         combinations[key] = [possible_key for possible_key in combinations[key] if possible_key not in confirmed_keys]
-pp.pprint(combinations)
 
+print('################# after redundancy removal #################')
+pp.pprint(combinations)
+print('############################################################\n')
 '''
 At this stage decipher the ciphertext once to see if more heuristic can be used
 '''
@@ -263,7 +267,7 @@ for a, b, c, d, e, f in candidate_prod:
         #     print(decryptedtext)
         #     decryptedtext = ''
     if decryptedtext[19:25] == 'USEDBE' and decryptedtext[119:125] == 'INTEXT':
-        print('\n######## PLAINTEXT FOUND ########')
+        print('######## PLAINTEXT FOUND ########')
         print(decryptedtext)
         print('#################################\n')
         break
