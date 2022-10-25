@@ -1,4 +1,5 @@
 from collections import deque, defaultdict
+from itertools import product
 import pprint
 pp = pprint.PrettyPrinter(compact=True)
 
@@ -116,6 +117,17 @@ for key in key_strings.split('\n'):
     
     key_dict[key] = temp_dict
 
+pp.pprint(key_dict['00'])
+
+# encryption test
+a = 'CRYPTO'
+keys = ['66', '11', '52', '55', '04', '90']
+offset = 11
+ciphertext = ''
+for plain_char, key in zip(a, keys):
+    ciphertext += key_dict[key][plain_char][offset]
+print(ciphertext)
+
 plaintext  = 'THISCIPHERWASWIDELYUSEDBECAUSEOFSIMPLESTR'
 ciphertext = 'OYKWUXRNJOOPPTXCTYNYQHFCQNIIWNKPAZQSTIFHOOWEYEHDQQYZMFQDHGZWUQIEZOUJNCEHDQQERBNJKRMRGLWIXVLVPFOBLLAVOPZENPADJPKVMMMPDYXJCBWEX'
 
@@ -134,8 +146,14 @@ S H A ...
 T -> O, C -> U, E -> J,...에 해당하는 key_string과 offset의 pair가 존재함
 '''
 
-for n in range(1, 6):
-    print(n)
+
+'''
+Looking at the plaintext, from heuristic 'STR' should be 'STRUCTURE', so adding UCTURE at the end and go through the process again:
+'''
+plaintext  = 'THISCIPHERWASWIDELYUSEDBECAUSEOFSIMPLESTRUCTURE'
+
+combinations = {}
+for n in range(1, 26):
     # groups에 residue of n 자리의 모든 문자를 하나의 그룹으로 묶어 놓는다
     groups = []
     for i in range(n):
@@ -147,24 +165,117 @@ for n in range(1, 6):
         groups.append(group)
     
     # groups에 대해서 위의 조건 검사 진행
-    # possible_pair_per_group = []
     for i in range(1, 26): # offset 값
-        pp.pprint(f'################# offset: {i} #################')
+        dictionary = {}
         for idx, group in enumerate(groups): # 각 residue 집합에 대해서 다음의 조건이 부합하는지 확인
             possible_key = []
             for j in range(0, 100):
                 key = str(j) if j > 9 else f'0{j}'
                 if all([ciphertext == key_dict[key][plaintext][i] for plaintext, ciphertext in group]):
                     possible_key.append(j)
-            pp.pprint(str(idx) + " : " + str(possible_key) + ' , ' + str(group))
+            if possible_key:
+                dictionary[idx] = possible_key
+        
+        if len(dictionary) == n:
+            # pp.pprint(f'################# n: {n}, offset: {i} #################\n')
+            # pp.pprint(dictionary)
+            combinations = dictionary
+
+'''
+The result shows that only available key length for this cipher is 25, and possible key for each digit is as follows:
+Now let us delete all the redundant keys for places that have multiple key possiblilities
+'''
+offset = 6
+
+confirmed_keys = set([possible_keys[0] for place, possible_keys in combinations.items() if len(possible_keys) == 1])
+for key in combinations.keys():
+    if len(combinations[key]) != 1:
+        combinations[key] = [possible_key for possible_key in combinations[key] if possible_key not in confirmed_keys]
+pp.pprint(combinations)
+
+'''
+At this stage decipher the ciphertext once to see if more heuristic can be used
+'''
+
+decryptedtext = ''
+for i, char in enumerate(ciphertext):
+    place = i % 25
+    key = combinations[place]
+    decryptedtext += key_dict[str(key[0]) if key[0] > 9 else '0' + str(key[0])][char][-offset] if len(key) == 1 else '0'
+    if place == 24:
+        # print(decryptedtext)
+        decryptedtext = ''
+    
+'''
+The result is:
+
+THI0CIP0ERWASWIDELY000000
+CAU0EOF0IMPLESTRUCT000000
+INF0RMA0IONSECURITY000000
+MOS0POP0LARKEYWORDS000000
+TET0ENI0ELOOKINGPLA000000
+
+For places of residue 3 and 7, there are only two candidates so they can be easily found by trying out all candidates.
+From random trial key for place 3 is 00 and key for place 7 is 38 is as follows:
+
+combinations[3] = [0]
+combinations[7] = [38]
+
+THISCIPHERWASWIDELY000000
+CAUSEOFSIMPLESTRUCT000000
+INFORMATIONSECURITY000000
+MOSTPOPULARKEYWORDS000000
+TETHENICELOOKINGPLA000000
+
+We know for a fact that 000000 for the first line is 'USEDBE' and that for second line is 'URE000'.
+From heuristic, we can guess that the last three '0' for second can be 'AND'.
+With this in mind, trial and error can be used to find keys which make 'USEDBE' for first line and 'UREAND' for secondd line.
 
 
 '''
-살아남은 k 후보에 대해서 lingustic statistic analysis 실행
+
+combinations[3] = [28]
+combinations[7] = [38]
+
+candidate_19 = [31, 42, 68, 96]
+candidate_20 = [5, 86]
+candidate_21 = [40, 42, 57, 79, 98]
+candidate_22 = [4, 24, 25, 34, 76]
+candidate_23 = [69, 78]
+candidate_24 = [12, 18, 48, 60, 65]
+candidate_prod = product(candidate_19, candidate_20, candidate_21, candidate_22, candidate_23, candidate_24)
+
+for a, b, c, d, e, f in candidate_prod:
+    
+    combinations[19] = [a]
+    combinations[20] = [b]
+    combinations[21] = [c]
+    combinations[22] = [d]
+    combinations[23] = [e]
+    combinations[24] = [f]
+    
+    decryptedtext = ''
+    for i, char in enumerate(ciphertext):
+        place = i % 25
+        key = combinations[place][0]
+        decryptedtext += key_dict[str(key) if key > 9 else '0' + str(key)][char][-offset]
+        # if place == 24:
+        #     print(decryptedtext)
+        #     decryptedtext = ''
+    if decryptedtext[19:25] == 'USEDBE' and decryptedtext[119:125] == 'INTEXT':
+        print('\n######## PLAINTEXT FOUND ########')
+        print(decryptedtext)
+        print('#################################\n')
+        break
+
+'''
+At last print the whole key in required format
 '''
 
-a = 'CRYPTO'
-keys = ['66', '11', '52', '55', '04', '90']
-offset = 11
-for plain_char, key in zip(a, keys):
-    print(key_dict[key][plain_char][offset])
+answer = '('
+for key, value in combinations.items():
+    if key == 24:
+        answer += f'{value[0]} / 25)'
+        break
+    answer += f'{value[0]}, '
+print('The final answer is: \n' + answer)
