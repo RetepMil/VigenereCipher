@@ -207,7 +207,7 @@ for i, char in enumerate(ciphertext):
     key = combinations[place]
     decryptedtext += key_dict[str(key[0]) if key[0] > 9 else '0' + str(key[0])][char][-offset] if len(key) == 1 else '0'
     if place == 24:
-        # print(decryptedtext)
+        print(decryptedtext)
         decryptedtext = ''
     
 '''
@@ -241,6 +241,15 @@ With this in mind, trial and error can be used to find keys which make 'USEDBE' 
 combinations[3] = [28]
 combinations[7] = [38]
 
+decryptedtext = ''
+for i, char in enumerate(ciphertext):
+    place = i % 25
+    key = combinations[place]
+    decryptedtext += key_dict[str(key[0]) if key[0] > 9 else '0' + str(key[0])][char][-offset] if len(key) == 1 else '0'
+    if place == 24:
+        print(decryptedtext)
+        decryptedtext = ''
+
 candidate_19 = [31, 42, 68, 96]
 candidate_20 = [5, 86]
 candidate_21 = [40, 42, 57, 79, 98]
@@ -263,13 +272,11 @@ for a, b, c, d, e, f in candidate_prod:
         place = i % 25
         key = combinations[place][0]
         decryptedtext += key_dict[str(key) if key > 9 else '0' + str(key)][char][-offset]
-        # if place == 24:
-        #     print(decryptedtext)
-        #     decryptedtext = ''
+    
     if decryptedtext[19:25] == 'USEDBE' and decryptedtext[119:125] == 'INTEXT':
-        print('######## PLAINTEXT FOUND ########')
+        print('############# PLAINTEXT FOUND #############')
         print(decryptedtext)
-        print('#################################\n')
+        print('###########################################\n')
         break
 
 '''
